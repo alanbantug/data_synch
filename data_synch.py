@@ -135,7 +135,7 @@ def update_combo_table(data_table, combo_table):
         
     conn.close()
 
-def validate_counts(data_table, combo_table):
+def validate_counts(data_table, combo_table, mode=0):
 
     conn = create_connection()
     cur = conn.cursor()
@@ -156,31 +156,40 @@ def validate_counts(data_table, combo_table):
 
     winner_count = cur.fetchall()[0][0]
 
+    if mode == 0:
+        print(f'Pre-synch stats')
+    else:
+        print(f'Post-synch stats')
+
     print(f'Data count      : {data_count}')
     print(f'Winner count    : {winner_count}')
 
 if __name__ == '__main__':
     res = input('Synch Fantasy Five tables (Y/N)? : ')
     if res.lower() == 'y':
+        validate_counts('fantasy_five', 'fantasy_combos')
         init_combo_table('fantasy_combos')
         update_combo_table('fantasy_five', 'fantasy_combos')
-        validate_counts('fantasy_five', 'fantasy_combos')
+        validate_counts('fantasy_five', 'fantasy_combos',1)
 
     res = input('Synch Super Lotto tables (Y/N)? : ')
     if res.lower() == 'y':
+        validate_counts('super_lotto', 'super_combos')
         init_combo_table('super_combos')
         update_combo_table('super_lotto', 'super_combos')
-        validate_counts('super_lotto', 'super_combos')
+        validate_counts('super_lotto', 'super_combos',1)
 
     res = input('Synch Mega Lotto tables (Y/N)? : ')
     if res.lower() == 'y':
+        validate_counts('mega_lotto', 'mega_combos')
         init_combo_table('mega_combos')
         update_combo_table('mega_lotto', 'mega_combos')
-        validate_counts('mega_lotto', 'mega_combos')
+        validate_counts('mega_lotto', 'mega_combos',1)
 
     res = input('Synch Powerball tables (Y/N)? : ')
     if res.lower() == 'y':
+        validate_counts('power_ball', 'power_combos')
         init_combo_table('power_combos')
         update_combo_table('power_ball', 'power_combos')
-        validate_counts('power_ball', 'power_combos')
+        validate_counts('power_ball', 'power_combos',1)
 
