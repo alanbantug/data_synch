@@ -27,7 +27,8 @@ def init_combo_table(combo_table):
     init_sql= f'''
     update {combo_table}
     set win_count = 0,
-        win_date = '          '
+        win_date = '          ',
+        top_count = 0
     '''
 
     cur = conn.cursor()
@@ -98,6 +99,40 @@ def update_combo_data(conn, combo_key, combo_win_count, combo_win_date, combo_ta
     
     return True
 
+def get_top_numbers(conn, data_table):
+
+    select = f'''
+    select A.num, sum(A.tot)
+    from (
+        select numa as num, count(*) as tot from {data_table} group by numa
+        union
+        select numb as num, count(*) as tot from {data_table} group by numb
+        union
+        select numc as num, count(*) as tot from {data_table} group by numc
+        union
+        select numd as num, count(*) as tot from {data_table} group by numd
+        union
+        select nume as num, count(*) as tot from {data_table} group by nume
+        ) A
+
+    group by A.num
+    
+    order by sum(A.tot) desc
+
+    '''
+
+    cur = conn.cursor()
+
+    cur.execute(select)
+
+    number_counts = cur.fetchall()
+    
+    number_counts = [n for n, c in number_counts]
+
+    cur.close()
+
+    return number_counts
+
 def update_combo_table(data_table, combo_table):
     
     rec = 0
@@ -108,7 +143,9 @@ def update_combo_table(data_table, combo_table):
     conn.autocommit = True
     
     winners = get_winners(conn, data_table)
-    
+    top_numbers = get_top_numbers(conn, data_table)
+    print(top_numbers)
+
     for winner in winners:
         
         rec += 1
