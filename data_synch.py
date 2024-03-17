@@ -75,12 +75,13 @@ def get_combo_data(conn, combo_key, combo_table):
     
     return combo_data
 
-def update_combo_data(conn, combo_key, combo_win_count, combo_win_date, combo_table):
+def update_combo_data(conn, combo_key, combo_win_count, combo_win_date, top_count, combo_table):
     
     update_sql= f'''
     update {combo_table}
     set win_count = {combo_win_count},
-        win_date = '{combo_win_date}'
+        win_date = '{combo_win_date}',
+        top_count = {top_count}
     where combo_key = '{combo_key}'
     
     '''
@@ -91,8 +92,8 @@ def update_combo_data(conn, combo_key, combo_win_count, combo_win_date, combo_ta
         
         cur.execute(update_sql)
         
-    except:
-        
+    except Exception as e:
+        print(e)
         return False
     
     cur.close()
@@ -143,8 +144,7 @@ def update_combo_table(data_table, combo_table):
     conn.autocommit = True
     
     winners = get_winners(conn, data_table)
-    top_numbers = get_top_numbers(conn, data_table)
-    print(top_numbers)
+    top_numbers = get_top_numbers(conn, data_table)[:25]
 
     for winner in winners:
         
@@ -167,7 +167,9 @@ def update_combo_table(data_table, combo_table):
         else:
             dup += 1
         
-        if update_combo_data(conn, combo_key, combo_win_count, combo_win_date, combo_table):
+        top_count = len(set(top_numbers).intersection(set(winner)))
+
+        if update_combo_data(conn, combo_key, combo_win_count, combo_win_date, top_count, combo_table):
             upd += 1
         
     conn.close()
