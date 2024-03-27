@@ -19,16 +19,26 @@ def create_connection():
 
     return conn
 
-def init_combo_table(combo_table):
-    
+def init_combo_table(data_table, combo_table):
+
     conn = create_connection()
     conn.autocommit = True
-    
+
+    init_combo_columns(conn, combo_table)
+    combo_keys = get_combo_keys(conn, combo_table)
+
+    res = input('Synch top number matches (Y/N)? : ')
+    if res.lower() == 'y':
+        set_top_counts(conn, combo_table, data_table, combo_keys)
+
+    conn.close()
+
+def init_combo_columns(conn, combo_table):
+
     init_sql= f'''
     update {combo_table}
     set win_count = 0,
-        win_date = '          ',
-        top_count = 0
+        win_date = '          '
     '''
 
     cur = conn.cursor()
@@ -39,7 +49,76 @@ def init_combo_table(combo_table):
         return False
     
     cur.close()
-    conn.close()
+
+
+def get_combo_keys(conn, combo_table):
+    
+    select_sql= f'''
+    select combo_key
+    from {combo_table}
+    '''
+
+    cur = conn.cursor()
+    
+    try:
+        cur.execute(select_sql)
+        combos = list(cur.fetchall())
+
+    except:
+        return False
+    
+    cur.close()
+
+    return combos
+
+def set_top_counts(conn, combo_table, data_table, combo_keys):
+
+    init_top_sql= f'''
+    update {combo_table}
+    set top_count = 0
+    '''
+
+    cur = conn.cursor()
+    
+    try:
+        cur.execute(init_top_sql)
+
+    except:
+        return False
+    
+    cur.close()
+
+    top_numbers = get_top_numbers(conn, data_table)[:25]
+
+    for combo_key in list(combo_keys):
+
+        numbers = split_keys(combo_key[0])
+        top_count = len(set(top_numbers).intersection(set(numbers)))
+
+        update_sql= f'''
+        update {combo_table}
+        set top_count = {top_count}
+        where combo_key = '{combo_key[0]}'
+        '''
+
+        cur = conn.cursor()
+    
+        try:
+            cur.execute(update_sql)
+        
+        except Exception as e:
+            print(e)
+            return False
+    
+        cur.close()
+
+def split_keys(combo_key):
+        
+    numbers = []
+    for i in range(0,10,2):
+        numbers.append(int(combo_key[i:i+2]))
+        
+    return numbers
 
 def get_winners(conn, data_table):
     
@@ -75,13 +154,12 @@ def get_combo_data(conn, combo_key, combo_table):
     
     return combo_data
 
-def update_combo_data(conn, combo_key, combo_win_count, combo_win_date, top_count, combo_table):
+def update_combo_data(conn, combo_key, combo_win_count, combo_win_date, combo_table):
     
     update_sql= f'''
     update {combo_table}
     set win_count = {combo_win_count},
-        win_date = '{combo_win_date}',
-        top_count = {top_count}
+        win_date = '{combo_win_date}'
     where combo_key = '{combo_key}'
     
     '''
@@ -144,7 +222,6 @@ def update_combo_table(data_table, combo_table):
     conn.autocommit = True
     
     winners = get_winners(conn, data_table)
-    top_numbers = get_top_numbers(conn, data_table)[:25]
 
     for winner in winners:
         
@@ -167,9 +244,7 @@ def update_combo_table(data_table, combo_table):
         else:
             dup += 1
         
-        top_count = len(set(top_numbers).intersection(set(winner)))
-
-        if update_combo_data(conn, combo_key, combo_win_count, combo_win_date, top_count, combo_table):
+        if update_combo_data(conn, combo_key, combo_win_count, combo_win_date, combo_table):
             upd += 1
         
     conn.close()
@@ -203,32 +278,34 @@ def validate_counts(data_table, combo_table, mode=0):
     print(f'Data count      : {data_count}')
     print(f'Winner count    : {winner_count}')
 
+def synch_combo_and_data(data_table, combo_table):
+
+    start = datetime.now()
+    print(start)
+    
+    validate_counts(data_table, combo_table)
+    init_combo_table(data_table, combo_table)
+    update_combo_table(data_table, combo_table)
+    validate_counts(data_table, combo_table,1)
+
+    end = datetime.now()
+    print(end)
+    print("Time elapsed: ", end - start)
+
 if __name__ == '__main__':
     res = input('Synch Fantasy Five tables (Y/N)? : ')
     if res.lower() == 'y':
-        validate_counts('fantasy_five', 'fantasy_combos')
-        init_combo_table('fantasy_combos')
-        update_combo_table('fantasy_five', 'fantasy_combos')
-        validate_counts('fantasy_five', 'fantasy_combos',1)
+        synch_combo_and_data('fantasy_five', 'fantasy_combos')
 
     res = input('Synch Super Lotto tables (Y/N)? : ')
     if res.lower() == 'y':
-        validate_counts('super_lotto', 'super_combos')
-        init_combo_table('super_combos')
-        update_combo_table('super_lotto', 'super_combos')
-        validate_counts('super_lotto', 'super_combos',1)
+        synch_combo_and_data('super_lotto', 'super_combos')
 
     res = input('Synch Mega Lotto tables (Y/N)? : ')
     if res.lower() == 'y':
-        validate_counts('mega_lotto', 'mega_combos')
-        init_combo_table('mega_combos')
-        update_combo_table('mega_lotto', 'mega_combos')
-        validate_counts('mega_lotto', 'mega_combos',1)
+        synch_combo_and_data('mega_lotto', 'mega_combos')
 
     res = input('Synch Powerball tables (Y/N)? : ')
     if res.lower() == 'y':
-        validate_counts('power_ball', 'power_combos')
-        init_combo_table('power_combos')
-        update_combo_table('power_ball', 'power_combos')
-        validate_counts('power_ball', 'power_combos',1)
+        synch_combo_and_data('power_ball', 'power_combos')
 
