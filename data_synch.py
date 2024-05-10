@@ -196,7 +196,7 @@ def get_top_numbers(conn, data_table):
 
     group by A.num
     
-    order by sum(A.tot) desc
+    order by sum(A.tot) desc, A.num asc
 
     '''
 
