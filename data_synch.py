@@ -75,7 +75,8 @@ def set_top_counts(conn, combo_table, data_table, combo_keys):
 
     init_top_sql= f'''
     update {combo_table}
-    set top_count = 0
+    set top_count = 0,
+        bot_count = 0
     '''
 
     cur = conn.cursor()
@@ -88,16 +89,20 @@ def set_top_counts(conn, combo_table, data_table, combo_keys):
     
     cur.close()
 
-    top_numbers = get_top_numbers(conn, data_table)[:25]
+    all_numbers = get_top_numbers(conn, data_table)
+    top_numbers = all_numbers[:25]
+    bot_numbers = all_numbers[-25:]
 
     for combo_key in list(combo_keys):
 
         numbers = split_keys(combo_key[0])
+
         top_count = len(set(top_numbers).intersection(set(numbers)))
+        bot_count = len(set(bot_numbers).intersection(set(numbers)))
 
         update_sql= f'''
         update {combo_table}
-        set top_count = {top_count}
+        set top_count = {top_count}, bot_count = {bot_count}
         where combo_key = '{combo_key[0]}'
         '''
 
@@ -111,6 +116,7 @@ def set_top_counts(conn, combo_table, data_table, combo_keys):
             return False
     
         cur.close()
+
 
 def split_keys(combo_key):
         
