@@ -5,6 +5,8 @@ import os
 
 from datetime import datetime, timedelta
 
+selection_found = False
+
 def create_connection():
     ''' Create connection to PostgreSQL database
     '''
@@ -76,7 +78,8 @@ def set_top_counts(conn, combo_table, data_table, combo_keys):
     init_top_sql= f'''
     update {combo_table}
     set top_count = 0,
-        bot_count = 0
+        bot_count = 0,
+        sel_count = 0
     '''
 
     cur = conn.cursor()
@@ -92,6 +95,13 @@ def set_top_counts(conn, combo_table, data_table, combo_keys):
     all_numbers = get_top_numbers(conn, data_table)
     top_numbers = all_numbers[:25]
     bot_numbers = all_numbers[-25:]
+
+    sel_numbers = get_selected(conn, data_table)
+    
+    if sel_numbers:
+        selection_found = True
+    else:
+        selection_found = False
 
     for combo_key in list(combo_keys):
 
@@ -114,7 +124,23 @@ def set_top_counts(conn, combo_table, data_table, combo_keys):
         except Exception as e:
             print(e)
             return False
-    
+
+        if selection_found:
+            sel_count = len(set(sel_numbers).intersection(set(numbers)))
+
+            update_sel= f'''
+            update {combo_table}
+            set sel_count = {sel_count}
+            where combo_key = '{combo_key[0]}'
+            '''
+
+            try:
+                cur.execute(update_sel)
+            
+            except Exception as e:
+                print(e)
+                return False
+
         cur.close()
 
 
@@ -218,6 +244,22 @@ def get_top_numbers(conn, data_table):
 
     return number_counts
 
+def get_selected(conn, data_table):
+
+    select = f'''
+    select selected from selected_numbers where table_name = '{data_table}'
+    '''
+
+    cur = conn.cursor()
+
+    cur.execute(select)
+
+    selected = cur.fetchall()[0][0]
+    
+    cur.close()
+
+    return selected
+    
 def update_combo_table(data_table, combo_table):
     
     rec = 0
